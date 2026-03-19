@@ -36,6 +36,7 @@ class EmailServiceType(str, Enum):
     CUSTOM_DOMAIN = "custom_domain"
     TEMP_MAIL = "temp_mail"
     DUCK_MAIL = "duck_mail"
+    FREEMAIL = "freemail"
 
 
 # ============================================================================
@@ -118,6 +119,13 @@ EMAIL_SERVICE_DEFAULTS = {
         "base_url": "",
         "default_domain": "",
         "password_length": 12,
+        "timeout": 30,
+        "max_retries": 3,
+    },
+    "freemail": {
+        "base_url": "",
+        "admin_token": "",
+        "domain": "",
         "timeout": 30,
         "max_retries": 3,
     }

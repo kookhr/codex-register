@@ -208,7 +208,7 @@ def _normalize_email_service_config(
     if service_type == EmailServiceType.CUSTOM_DOMAIN:
         if 'domain' in normalized and 'default_domain' not in normalized:
             normalized['default_domain'] = normalized.pop('domain')
-    elif service_type == EmailServiceType.TEMP_MAIL:
+    elif service_type in (EmailServiceType.TEMP_MAIL, EmailServiceType.FREEMAIL):
         if 'default_domain' in normalized and 'domain' not in normalized:
             normalized['domain'] = normalized.pop('default_domain')
     elif service_type == EmailServiceType.DUCK_MAIL:
@@ -358,6 +358,20 @@ def _run_sync_registration_task(task_uuid: str, email_service_type: str, proxy: 
                         logger.info(f"使用数据库 DuckMail 服务: {db_service.name}")
                     else:
                         raise ValueError("没有可用的 DuckMail 邮箱服务，请先在邮箱服务页面添加服务")
+                elif service_type == EmailServiceType.FREEMAIL:
+                    from ...database.models import EmailService as EmailServiceModel
+
+                    db_service = db.query(EmailServiceModel).filter(
+                        EmailServiceModel.service_type == "freemail",
+                        EmailServiceModel.enabled == True
+                    ).order_by(EmailServiceModel.priority.asc()).first()
+
+                    if db_service and db_service.config:
+                        config = _normalize_email_service_config(service_type, db_service.config, actual_proxy_url)
+                        crud.update_registration_task(db, task_uuid, email_service_id=db_service.id)
+                        logger.info(f"使用数据库 Freemail 服务: {db_service.name}")
+                    else:
+                        raise ValueError("没有可用的 Freemail 邮箱服务，请先在邮箱服务页面添加服务")
                 else:
                     config = email_service_config or {}
 
@@ -1091,6 +1105,11 @@ async def get_available_email_services():
             "available": False,
             "count": 0,
             "services": []
+        },
+        "freemail": {
+            "available": False,
+            "count": 0,
+            "services": []
         }
     }
 
@@ -1181,6 +1200,24 @@ async def get_available_email_services():
 
         result["duck_mail"]["count"] = len(duck_mail_services)
         result["duck_mail"]["available"] = len(duck_mail_services) > 0
+
+        freemail_services = db.query(EmailServiceModel).filter(
+            EmailServiceModel.service_type == "freemail",
+            EmailServiceModel.enabled == True
+        ).order_by(EmailServiceModel.priority.asc()).all()
+
+        for service in freemail_services:
+            config = service.config or {}
+            result["freemail"]["services"].append({
+                "id": service.id,
+                "name": service.name,
+                "type": "freemail",
+                "domain": config.get("domain"),
+                "priority": service.priority
+            })
+
+        result["freemail"]["count"] = len(freemail_services)
+        result["freemail"]["available"] = len(freemail_services) > 0
 
     return result
 

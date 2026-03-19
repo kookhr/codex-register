@@ -23,7 +23,8 @@ let availableServices = {
     outlook: { available: false, services: [] },
     custom_domain: { available: false, services: [] },
     temp_mail: { available: false, services: [] },
-    duck_mail: { available: false, services: [] }
+    duck_mail: { available: false, services: [] },
+    freemail: { available: false, services: [] }
 };
 
 // WebSocket 相关变量
@@ -354,6 +355,23 @@ function updateEmailServiceOptions() {
 
         select.appendChild(optgroup);
     }
+
+    // Freemail
+    if (availableServices.freemail && availableServices.freemail.available) {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = `📧 Freemail (${availableServices.freemail.count} 个服务)`;
+
+        availableServices.freemail.services.forEach(service => {
+            const option = document.createElement('option');
+            option.value = `freemail:${service.id}`;
+            option.textContent = service.name + (service.domain ? ` (@${service.domain})` : '');
+            option.dataset.type = 'freemail';
+            option.dataset.serviceId = service.id;
+            optgroup.appendChild(option);
+        });
+
+        select.appendChild(optgroup);
+    }
 }
 
 // 处理邮箱服务切换
@@ -398,6 +416,11 @@ function handleServiceChange(e) {
         const service = availableServices.duck_mail.services.find(s => s.id == id);
         if (service) {
             addLog('info', `[系统] 已选择 DuckMail 服务: ${service.name}`);
+        }
+    } else if (type === 'freemail') {
+        const service = availableServices.freemail.services.find(s => s.id == id);
+        if (service) {
+            addLog('info', `[系统] 已选择 Freemail 服务: ${service.name}`);
         }
     }
 }
